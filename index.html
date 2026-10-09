@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Football Digest — Live Scores, Tables & News</title>
+<meta name="description" content="Live football scores, league tables and the latest news for the Premier League, La Liga, Serie A, Bundesliga, Ligue 1 and Champions League.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--ink:#0f172a;--mute:#64748b;--line:#e2e8f0;--brand:#16a34a;--brand2:#0f766e;--live:#dc2626;--chip:#e8edf2;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+@media(prefers-color-scheme:dark){:root{--bg:#0b1220;--card:#131c2e;--ink:#e8eefc;--mute:#94a3b8;--line:#22304a;--chip:#1b2740}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);line-height:1.5}
+header{background:linear-gradient(135deg,#052e16,#0f766e);color:#fff;padding:28px 16px 64px}
+.wrap{max-width:860px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.25rem}
+h1{font-size:clamp(1.6rem,5vw,2.4rem);margin:18px 0 6px;line-height:1.15}
+header p{margin:0;opacity:.85;max-width:560px}
+main{margin-top:-40px;padding:0 12px 40px}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.tab{border:0;border-radius:12px;padding:14px 8px;font:inherit;font-weight:700;background:var(--card);color:var(--ink);cursor:pointer;box-shadow:0 2px 8px #0002}
+.tab[aria-selected=true]{background:var(--brand);color:#fff}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:999px;padding:8px 14px;font:inherit;font-size:.9rem;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:8px 16px 16px;box-shadow:0 2px 10px #0001;min-height:200px}
+.card h2{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:18px 0 6px}
+.m{display:grid;grid-template-columns:70px 1fr auto 1fr;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.m:last-child{border:0}.m .t{text-align:right;font-weight:600}.m .a{font-weight:600}
+.sc{font-weight:800;background:var(--chip);border-radius:8px;padding:2px 10px;min-width:62px;text-align:center}
+.st{font-size:.78rem;color:var(--mute)}.live{color:var(--live);font-weight:800}
+table{width:100%;border-collapse:collapse;font-size:.92rem}th,td{padding:9px 6px;text-align:center;border-bottom:1px solid var(--line)}
+th{color:var(--mute);font-size:.75rem;text-transform:uppercase}td:nth-child(2),th:nth-child(2){text-align:left;font-weight:600}
+tr.cl td:first-child{box-shadow:inset 3px 0 var(--brand)}tr.rel td:first-child{box-shadow:inset 3px 0 var(--live)}
+.wide{overflow-x:auto}.pts{font-weight:800}
+.n{display:block;padding:14px 0;border-bottom:1px solid var(--line);color:inherit;text-decoration:none}
+.n:hover b{color:var(--brand)}.n span{display:block;color:var(--mute);font-size:.88rem;margin-top:4px}
+.msg{padding:40px 0;text-align:center;color:var(--mute)}
+.bar{display:flex;justify-content:space-between;color:var(--mute);font-size:.8rem;margin-top:10px}
+footer{text-align:center;color:var(--mute);font-size:.8rem;padding:0 16px 32px}
+@media(max-width:520px){.m{grid-template-columns:54px 1fr auto 1fr;font-size:.9rem}}
+</style></head><body>
+<header><div class="wrap">
+<div class="brand">⚽ Football Digest</div>
+<h1>Live scores, tables &amp; news — one tap away.</h1>
+<p>Premier League, La Liga, Serie A, Bundesliga, Ligue 1 and the Champions League.</p>
+</div></header>
+<main><div class="wrap">
+<div class="tabs" role="tablist" id="tabs"></div>
+<div class="chips" id="chips"></div>
+<div class="card" id="out" aria-live="polite"></div>
+<div class="bar"><span id="upd"></span><span>Auto-refreshes every minute</span></div>
+</div></main>
+<footer>Data from ESPN public feeds · Times shown in your local time zone · For information only.</footer>
+<script>
+const LG={"eng.1":"Premier League","esp.1":"La Liga","ita.1":"Serie A","ger.1":"Bundesliga","fra.1":"Ligue 1","uefa.champions":"Champions League"};
+const TABS={scores:"⚽ Scores",table:"🏆 Table",news:"📰 News"};
+let tab="scores",lg="eng.1",timer;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function nav(){
+ $("tabs").innerHTML=Object.entries(TABS).map(([k,v])=>`<button class="tab" role="tab" aria-selected="${k==tab}" data-t="${k}">${v}</button>`).join("");
+ $("chips").innerHTML=Object.entries(LG).map(([k,v])=>`<button class="chip" aria-pressed="${k==lg}" data-l="${k}">${v}</button>`).join("");
+}
+document.addEventListener("click",e=>{
+ const t=e.target.closest("[data-t]"),l=e.target.closest("[data-l]");
+ if(t)tab=t.dataset.t; else if(l)lg=l.dataset.l; else return;
+ nav();load();
+});
+const fmt=iso=>new Date(iso).toLocaleString([],{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+function scores(d){
+ const live=[],done=[],soon=[];
+ (d.events||[]).sort((a,b)=>a.date<b.date?-1:1).forEach(ev=>{try{
+  const c=ev.competitions[0].competitors,h=c.find(x=>x.homeAway=="home"),a=c.find(x=>x.homeAway=="away"),s=ev.status.type;
+  const nm=x=>x.team.shortDisplayName||x.team.displayName;
+  const row=(st,mid)=>`<div class="m"><div class="st">${st}</div><div class="t">${esc(nm(h))}</div><div class="sc">${mid}</div><div class="a">${esc(nm(a))}</div></div>`;
+  const sc=`${esc(h.score??0)} - ${esc(a.score??0)}`;
+  if(s.state=="in")live.push(row(`<span class="live">● ${esc(s.shortDetail||"LIVE")}</span>`,sc));
+  else if(s.state=="post")done.push(row(esc(fmt(ev.date).split(",")[0]||"FT"),sc));
+  else soon.push(row(esc(new Date(ev.date).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})+" · "+new Date(ev.date).toLocaleDateString([],{day:"numeric",month:"short"})),"vs"));
+ }catch(_){}});
+ const sec=(t,r)=>r.length?`<h2>${t}</h2>${r.join("")}`:"";
+ return sec("Live now",live)+sec("Recent results",done.slice(-8).reverse())+sec("Coming up",soon.slice(0,8))||`<div class="msg">No matches in the last 2 / next 3 days.</div>`;
+}
+function table(d){
+ if(lg=="uefa.champions")return`<div class="msg">Table view isn't available for the Champions League.<br>Try Scores or News.</div>`;
+ const e=d.children[0].standings.entries.map(x=>{const s={};x.stats.forEach(i=>s[i.name]=i.value);return{n:x.team.displayName,rk:+s.rank||99,p:s.gamesPlayed|0,w:s.wins|0,d:s.ties|0,l:s.losses|0,gd:s.pointDifferential|0,pts:s.points|0}}).sort((a,b)=>a.rk-b.rk||b.pts-a.pts);
+ const N=e.length;
+ return`<div class="wide"><table><tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr>${e.map((r,i)=>`<tr class="${i<4?"cl":i>=N-3?"rel":""}"><td>${i+1}</td><td>${esc(r.n)}</td><td>${r.p}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.gd>0?"+":""}${r.gd}</td><td class="pts">${r.pts}</td></tr>`).join("")}</table></div>`;
+}
+function news(d){
+ const a=(d.articles||[]).slice(0,10).filter(x=>x.headline);
+ return a.length?a.map(x=>{const u=x.links&&x.links.web&&x.links.web.href;return`<a class="n" ${u?`href="${esc(u)}" target="_blank" rel="noopener"`:""}><b>${esc(x.headline)}</b><span>${esc(x.description||"")}</span></a>`}).join(""):`<div class="msg">No headlines right now.</div>`;
+}
+async function load(){
+ clearTimeout(timer);
+ const out=$("out");out.innerHTML=`<div class="msg">Loading…</div>`;
+ try{
+  const r=await fetch(`/api?kind=${tab}&league=${lg}`);if(!r.ok)throw 0;
+  const d=await r.json();
+  out.innerHTML=`<h2>${LG[lg]} · ${TABS[tab].slice(2)}</h2>`+({scores,table,news}[tab])(d);
+  $("upd").textContent="Updated "+new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+ }catch(_){out.innerHTML=`<div class="msg">⚠️ Couldn't load data right now.<br>Please try again in a minute.</div>`}
+ timer=setTimeout(load,60000);
+}
+nav();load();
+</script></body></html>
